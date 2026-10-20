@@ -1,0 +1,12 @@
+model Otp {
+  id        String    @id @default(cuid())
+  phone     String
+  code      String    // کد ۵ رقمی احراز هویت
+  expiresAt DateTime  // زمان انقضای کد (۲ دقیقه پس از تولید)
+  attempts  Int       @default(0) // شمارنده تلاش‌های ناموفق برای امنیت
+  used      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([phone])
+  @@index([expiresAt])
+}

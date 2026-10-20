@@ -1,12 +1,12 @@
 import { Router } from "express";
 import {
-  loginPasswordHandler,
-  sendOtpHandler,
-  verifyOtpHandler,
-  setPasswordHandler,
-  refreshHandler,
-  logoutHandler,
-  meHandler,
+    loginPasswordHandler,
+    logoutHandler,
+    meHandler,
+    refreshHandler,
+    sendOtpHandler,
+    setPasswordHandler,
+    verifyOtpHandler,
 } from "./auth.controller.js";
 
 const authRoutes: Router = Router();
