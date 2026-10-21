@@ -1,4 +1,6 @@
-import { generateUserToken } from "./auth.security.js";
+import prisma from "../../config/prisma.js";
+import { tooManyRequests } from "../../errors/app-error.js";
+import { generateOtpCode, generateUserToken } from "./auth.utils.js";
 import type {
     AuthResult,
     AuthUser,
@@ -18,6 +20,87 @@ const sampleUser: AuthUser = {
 };
 
 /**
+ * Functional: Request 5-digit OTP with 2-minute expiration, 60s anti-spam cooldown,
+ * opportunistic cleanup of expired records, and development mode code exposure.
+ */
+export const sendOtp = async (data: SendOtpDto): Promise<SendOtpResponse> => {
+    // 1. Opportunistic Cleanup: Delete expired OTP records asynchronously in background
+    prisma.otp
+        .deleteMany({
+            where: {
+                expiresAt: { lt: new Date() },
+            },
+        })
+        .catch((err) => {
+            console.error("Opportunistic OTP cleanup error:", err);
+        });
+
+    // 2. Strict Rate Limit: Prevent new requests while previous OTP is still valid (2 minutes)
+    const activeOtp = await prisma.otp.findFirst({
+        where: {
+            phone: data.phone,
+            used: false,
+            expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+    });
+
+    if (activeOtp) {
+        const remainingMs = activeOtp.expiresAt.getTime() - Date.now();
+        if (remainingMs > 0) {
+            const remainingSeconds = Math.ceil(remainingMs / 1000);
+            throw tooManyRequests(
+                `کد تأیید قبلی هنوز معتبر است. لطفاً ${remainingSeconds} ثانیه دیگر جهت درخواست مجدد شکیبا باشید`,
+            );
+        }
+    }
+
+    // Invalidate any previous unused OTP records for this phone
+    await prisma.otp.updateMany({
+        where: {
+            phone: data.phone,
+            used: false,
+        },
+        data: {
+            used: true,
+        },
+    });
+
+    // 3. Cryptographically secure 5-digit code generation
+    const code = generateOtpCode();
+    const expiresIn = 120; // 2 minutes (120 seconds)
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // 4. Save new OTP record to PostgreSQL
+    await prisma.otp.create({
+        data: {
+            phone: data.phone,
+            code,
+            expiresAt,
+        },
+    });
+
+    // 5. Check if user already exists in User table
+    const existingUser = await prisma.user.findUnique({
+        where: { phone: data.phone },
+        select: { id: true },
+    });
+    const isNewUser = !existingUser;
+
+    // 6. Handle Development vs Production exposure
+    const isDev = process.env.NODE_ENV !== "production";
+    if (isDev) {
+        console.log(`[AUTH OTP DEV] Phone: ${data.phone} -> Code: ${code} (Expires in 2m)`);
+    }
+
+    return {
+        isNewUser,
+        expiresIn,
+        ...(isDev ? { code } : {}),
+    };
+};
+
+/**
  * Functional: Mock login with phone and password (issuing 7-day user token)
  */
 export const loginWithPassword = async (
@@ -33,18 +116,6 @@ export const loginWithPassword = async (
     return {
         user,
         token,
-    };
-};
-
-/**
- * Functional: Mock sending OTP code (checks if new or existing user)
- */
-export const sendOtp = async (data: SendOtpDto): Promise<SendOtpResponse> => {
-    const isNewUser = data.phone !== sampleUser.phone;
-
-    return {
-        isNewUser,
-        expiresIn: 120, // 2 minutes cooldown
     };
 };
 

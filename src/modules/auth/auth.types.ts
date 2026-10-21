@@ -23,6 +23,7 @@ export interface AuthUser {
 export interface SendOtpResponse {
     isNewUser: boolean;
     expiresIn: number;
+    code?: string;
 }
 
 export interface AuthResult {

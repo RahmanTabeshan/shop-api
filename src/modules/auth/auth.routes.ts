@@ -123,7 +123,8 @@ authRoutes.post(
  *       - Authentication
  *     summary: تعیین یا ویرایش رمز عبور در پنل کاربری
  *     security:
- *       - sessionCookieAuth: []
+ *       - userSessionCookieAuth: []
+ *       - userTokenCookieAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -171,7 +172,8 @@ authRoutes.post("/logout", logoutHandler);
  *       - Authentication
  *     summary: دریافت مشخصات کاربر جاری از طریق کوکی‌های فعال (یا احیای خودکار با user_token)
  *     security:
- *       - sessionCookieAuth: []
+ *       - userSessionCookieAuth: []
+ *       - userTokenCookieAuth: []
  *     responses:
  *       200:
  *         description: مشخصات کاربر جاری

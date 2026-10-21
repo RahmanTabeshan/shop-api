@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { unauthorized } from "../../errors/app-error.js";
-import { clearUserCookies, setUserCookies } from "./auth.cookies.js";
+import { clearUserCookies, setUserCookies } from "./auth.utils.js";
 import {
     getCurrentUser,
     loginWithPassword,

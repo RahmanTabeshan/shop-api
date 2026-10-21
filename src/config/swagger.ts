@@ -18,17 +18,17 @@ const swaggerOptions: swaggerJSDoc.Options = {
     ],
     components: {
       securitySchemes: {
-        sessionCookieAuth: {
+        userSessionCookieAuth: {
           type: "apiKey",
           in: "cookie",
-          name: "session",
-          description: "کوکی موقت سشن کاربر (Session Cookie)",
+          name: "user_session",
+          description: "کوکی امضاشده سشن موقت کاربر عادی (Browser Session Cookie)",
         },
-        refreshCookieAuth: {
+        userTokenCookieAuth: {
           type: "apiKey",
           in: "cookie",
-          name: "refreshToken",
-          description: "کوکی پایدار ۷ روزه تمدید توکن (Refresh Cookie)",
+          name: "user_token",
+          description: "کوکی امضاشده پایدار ۷ روزه کاربر عادی (Persistent Cookie)",
         },
       },
     },

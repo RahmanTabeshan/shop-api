@@ -4,14 +4,14 @@ import {
     COOKIE_USER_SESSION,
     COOKIE_USER_TOKEN,
     restoreUserSessionCookie,
-} from "../modules/auth/auth.cookies.js";
-import { verifyUserToken } from "../modules/auth/auth.security.js";
+    verifyUserToken,
+} from "../modules/auth/auth.utils.js";
 
 /**
  * Functional Authenticate Middleware
- * Implements signed dual-cookie authentication with automatic session restoration:
- * 1. Checks active signed user_session (or Bearer header)
- * 2. If user_session is missing (browser reopened), checks signed user_token (7-day persistent)
+ * Strictly reads authentication tokens ONLY from signed HTTP cookies:
+ * 1. Checks active signed user_session cookie
+ * 2. If user_session is missing (browser reopened), checks signed user_token cookie (7-day persistent)
  *    and immediately restores user_session on the response!
  */
 export const authenticate = (
@@ -20,7 +20,7 @@ export const authenticate = (
     next: NextFunction,
 ): void => {
     try {
-        // Read from signedCookies (guaranteed tamper-proof by cookie-parser HMAC signature)
+        // Strictly read ONLY from signed cookies (no headers accepted)
         const sessionToken =
             typeof req.signedCookies?.[COOKIE_USER_SESSION] === "string"
                 ? req.signedCookies[COOKIE_USER_SESSION]
@@ -31,16 +31,10 @@ export const authenticate = (
                 ? req.signedCookies[COOKIE_USER_TOKEN]
                 : undefined;
 
-        const authHeader = req.headers.authorization;
-        const bearerToken = authHeader?.startsWith("Bearer ")
-            ? authHeader.slice(7).trim()
-            : undefined;
-
-        // 1. First priority: Active browser session cookie or Bearer header
-        const activeToken = sessionToken || bearerToken;
-        if (activeToken) {
+        // 1. First priority: Active signed user_session cookie
+        if (sessionToken) {
             try {
-                const payload = verifyUserToken(activeToken);
+                const payload = verifyUserToken(sessionToken);
                 req.user = { id: payload.userId };
                 return next();
             } catch {
@@ -48,7 +42,7 @@ export const authenticate = (
             }
         }
 
-        // 2. Second priority: Persistent 7-day signed cookie (user returned after closing browser)
+        // 2. Second priority: Persistent 7-day signed user_token cookie (user returned after closing browser)
         if (persistentToken) {
             try {
                 const payload = verifyUserToken(persistentToken);
