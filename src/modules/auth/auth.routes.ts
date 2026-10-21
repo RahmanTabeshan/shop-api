@@ -1,13 +1,20 @@
 import { Router } from "express";
+import { authenticate } from "../../middlewares/auth.middleware.js";
+import { validate } from "../../middlewares/validate.js";
 import {
     loginPasswordHandler,
     logoutHandler,
     meHandler,
-    refreshHandler,
     sendOtpHandler,
     setPasswordHandler,
     verifyOtpHandler,
 } from "./auth.controller.js";
+import {
+    loginPasswordSchema,
+    sendOtpSchema,
+    setPasswordSchema,
+    verifyOtpSchema,
+} from "./auth.validation.js";
 
 const authRoutes: Router = Router();
 
@@ -17,7 +24,7 @@ const authRoutes: Router = Router();
  *   post:
  *     tags:
  *       - Authentication
- *     summary: ورود با شماره موبایل و رمز عبور (بدون ارسال پیامک)
+ *     summary: ورود با شماره موبایل و رمز عبور (ست شدن user_session و user_token)
  *     requestBody:
  *       required: true
  *       content:
@@ -36,11 +43,15 @@ const authRoutes: Router = Router();
  *                 example: "SecretPass123"
  *     responses:
  *       200:
- *         description: ورود موفق و ست شدن کوکی‌های session و refreshToken
+ *         description: ورود موفق و ست شدن کوکی‌های user_session و user_token
  *       400:
  *         description: اطلاعات نامعتبر یا رمز عبور اشتباه
  */
-authRoutes.post("/login-password", loginPasswordHandler);
+authRoutes.post(
+    "/login-password",
+    validate(loginPasswordSchema),
+    loginPasswordHandler,
+);
 
 /**
  * @openapi
@@ -65,7 +76,11 @@ authRoutes.post("/login-password", loginPasswordHandler);
  *       200:
  *         description: کد تایید ارسال شد و مشخص می‌کند کاربر جدید است یا قبلی
  */
-authRoutes.post("/send-otp", sendOtpHandler);
+authRoutes.post(
+    "/send-otp",
+    validate(sendOtpSchema),
+    sendOtpHandler,
+);
 
 /**
  * @openapi
@@ -94,7 +109,11 @@ authRoutes.post("/send-otp", sendOtpHandler);
  *       200:
  *         description: کد تایید شد و کوکی‌های ورود ست شدند
  */
-authRoutes.post("/verify-otp", verifyOtpHandler);
+authRoutes.post(
+    "/verify-otp",
+    validate(verifyOtpSchema),
+    verifyOtpHandler,
+);
 
 /**
  * @openapi
@@ -124,24 +143,12 @@ authRoutes.post("/verify-otp", verifyOtpHandler);
  *       200:
  *         description: رمز عبور با موفقیت ذخیره شد
  */
-authRoutes.post("/set-password", setPasswordHandler);
-
-/**
- * @openapi
- * /api/auth/refresh:
- *   post:
- *     tags:
- *       - Authentication
- *     summary: تمدید سشن با کوکی پایدار رفرش‌توکن
- *     security:
- *       - refreshCookieAuth: []
- *     responses:
- *       200:
- *         description: سشن با موفقیت تمدید شد
- *       401:
- *         description: کوکی رفرش‌توکن یافت نشد یا منقضی شده
- */
-authRoutes.post("/refresh", refreshHandler);
+authRoutes.post(
+    "/set-password",
+    authenticate,
+    validate(setPasswordSchema),
+    setPasswordHandler,
+);
 
 /**
  * @openapi
@@ -149,7 +156,7 @@ authRoutes.post("/refresh", refreshHandler);
  *   post:
  *     tags:
  *       - Authentication
- *     summary: خروج از حساب کاربری و پاک کردن هر دو کوکی
+ *     summary: خروج از حساب کاربری و پاک کردن هر دو کوکی user_session و user_token
  *     responses:
  *       200:
  *         description: کوکی‌ها با موفقیت پاک شدند
@@ -162,7 +169,7 @@ authRoutes.post("/logout", logoutHandler);
  *   get:
  *     tags:
  *       - Authentication
- *     summary: دریافت مشخصات کاربر جاری از طریق کوکی‌های فعال
+ *     summary: دریافت مشخصات کاربر جاری از طریق کوکی‌های فعال (یا احیای خودکار با user_token)
  *     security:
  *       - sessionCookieAuth: []
  *     responses:
@@ -171,6 +178,6 @@ authRoutes.post("/logout", logoutHandler);
  *       401:
  *         description: احراز هویت انجام نشده است
  */
-authRoutes.get("/me", meHandler);
+authRoutes.get("/me", authenticate, meHandler);
 
 export default authRoutes;

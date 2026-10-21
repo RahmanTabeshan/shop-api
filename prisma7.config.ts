@@ -1,13 +1,13 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
-const user = encodeURIComponent(env("DATABASE_USER"));
-const pass = encodeURIComponent(env("DATABASE_PASS"));
-const host = encodeURIComponent(env("DATABASE_HOST"));
-const port = encodeURIComponent(env("DATABASE_PORT"));
-const database_name = encodeURIComponent(env("DATABASE_NAME"));
+const user = encodeURIComponent(process.env.DATABASE_USER || process.env.DB_USER || "postgres");
+const pass = encodeURIComponent(process.env.DATABASE_PASS || process.env.DB_PASSWORD || "");
+const host = encodeURIComponent(process.env.DATABASE_HOST || process.env.DB_HOST || "localhost");
+const port = encodeURIComponent(process.env.DATABASE_PORT || process.env.DB_PORT || "5432");
+const database_name = encodeURIComponent(process.env.DATABASE_NAME || process.env.DB_NAME || "shop_db");
 
-const DATABASE_URL = `postgresql://${user}:${pass}@${host}:${port}/${database_name}`;
+const DATABASE_URL = process.env.DATABASE_URL || `postgresql://${user}:${pass}@${host}:${port}/${database_name}`;
 
 export default defineConfig({
   schema: "prisma/schema",

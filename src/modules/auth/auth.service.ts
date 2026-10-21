@@ -1,5 +1,6 @@
+import { generateUserToken } from "./auth.security.js";
 import type {
-    AuthTokens,
+    AuthResult,
     AuthUser,
     LoginPasswordDto,
     SendOtpDto,
@@ -8,7 +9,7 @@ import type {
     VerifyOtpDto,
 } from "./auth.types.js";
 
-// Mock user store for initial testing
+// Mock user store for current testing phase
 const sampleUser: AuthUser = {
     id: "sample-user-uuid-1",
     phone: "09121234567",
@@ -17,20 +18,21 @@ const sampleUser: AuthUser = {
 };
 
 /**
- * Functional: Mock login with phone and password
+ * Functional: Mock login with phone and password (issuing 7-day user token)
  */
 export const loginWithPassword = async (
     data: LoginPasswordDto,
-): Promise<{ user: AuthUser; tokens: AuthTokens }> => {
+): Promise<AuthResult> => {
+    const user: AuthUser = {
+        ...sampleUser,
+        phone: data.phone,
+    };
+
+    const token = generateUserToken(user.id);
+
     return {
-        user: {
-            ...sampleUser,
-            phone: data.phone,
-        },
-        tokens: {
-            sessionToken: `mock-session-token-${Date.now()}`,
-            refreshToken: `mock-refresh-token-${Date.now()}`,
-        },
+        user,
+        token,
     };
 };
 
@@ -47,24 +49,24 @@ export const sendOtp = async (data: SendOtpDto): Promise<SendOtpResponse> => {
 };
 
 /**
- * Functional: Mock OTP verification and auto-login / register
+ * Functional: Mock OTP verification and auto-login / register (issuing 7-day user token)
  */
 export const verifyOtp = async (
     data: VerifyOtpDto,
-): Promise<{ user: AuthUser; tokens: AuthTokens }> => {
+): Promise<AuthResult> => {
     const isNewUser = data.phone !== sampleUser.phone;
+    const user: AuthUser = {
+        id: isNewUser ? `new-user-${Date.now()}` : sampleUser.id,
+        phone: data.phone,
+        hasPassword: !isNewUser,
+        createdAt: new Date(),
+    };
+
+    const token = generateUserToken(user.id);
 
     return {
-        user: {
-            id: isNewUser ? `new-user-${Date.now()}` : sampleUser.id,
-            phone: data.phone,
-            hasPassword: !isNewUser,
-            createdAt: new Date(),
-        },
-        tokens: {
-            sessionToken: `mock-session-token-${Date.now()}`,
-            refreshToken: `mock-refresh-token-${Date.now()}`,
-        },
+        user,
+        token,
     };
 };
 
@@ -76,17 +78,6 @@ export const setPassword = async (
     _data: SetPasswordDto,
 ): Promise<{ success: boolean }> => {
     return { success: true };
-};
-
-/**
- * Functional: Mock token refresh
- */
-export const refreshSession = async (
-    _refreshToken: string,
-): Promise<{ sessionToken: string }> => {
-    return {
-        sessionToken: `mock-refreshed-session-${Date.now()}`,
-    };
 };
 
 /**

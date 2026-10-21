@@ -1,3 +1,18 @@
+import type { z } from "zod";
+import type {
+    loginPasswordSchema,
+    sendOtpSchema,
+    setPasswordSchema,
+    verifyOtpSchema,
+} from "./auth.validation.js";
+
+// Request DTOs strictly inferred from Zod schemas
+export type SendOtpDto = z.infer<typeof sendOtpSchema>;
+export type VerifyOtpDto = z.infer<typeof verifyOtpSchema>;
+export type LoginPasswordDto = z.infer<typeof loginPasswordSchema>;
+export type SetPasswordDto = z.infer<typeof setPasswordSchema>;
+
+// Response & Domain Models
 export interface AuthUser {
     id: string;
     phone: string;
@@ -5,31 +20,12 @@ export interface AuthUser {
     createdAt: Date;
 }
 
-export interface LoginPasswordDto {
-    phone: string;
-    password: string;
-}
-
-export interface SendOtpDto {
-    phone: string;
-}
-
 export interface SendOtpResponse {
     isNewUser: boolean;
     expiresIn: number;
 }
 
-export interface VerifyOtpDto {
-    phone: string;
-    code: string;
-}
-
-export interface SetPasswordDto {
-    newPassword: string;
-    oldPassword?: string;
-}
-
-export interface AuthTokens {
-    sessionToken: string;
-    refreshToken: string;
+export interface AuthResult {
+    user: AuthUser;
+    token: string;
 }
