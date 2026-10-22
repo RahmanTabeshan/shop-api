@@ -1,11 +1,11 @@
 import type { NextFunction, Request, Response } from "express";
-import { unauthorized } from "../errors/app-error.js";
+import { unauthorized } from "../../errors/app-error.js";
 import {
     COOKIE_USER_SESSION,
     COOKIE_USER_TOKEN,
     restoreUserSessionCookie,
     verifyUserToken,
-} from "../modules/auth/auth.utils.js";
+} from "./auth.utils.js";
 
 /**
  * Functional Authenticate Middleware

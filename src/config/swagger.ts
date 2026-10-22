@@ -2,6 +2,13 @@ import type { Express, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 
+const rawBaseUrl = process.env.BASE_URL?.trim() || "";
+const baseUrl = rawBaseUrl
+    ? (rawBaseUrl.startsWith("/") ? rawBaseUrl : `/${rawBaseUrl}`).replace(/\/+$/, "")
+    : "";
+
+const port = process.env.PORT || "5000";
+
 const swaggerOptions: swaggerJSDoc.Options = {
   definition: {
     openapi: "3.0.3",
@@ -12,7 +19,7 @@ const swaggerOptions: swaggerJSDoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:3000",
+        url: `http://localhost:${port}${baseUrl}`,
         description: "محیط توسعه لوکال (Development)",
       },
     ],
@@ -43,9 +50,11 @@ const swaggerOptions: swaggerJSDoc.Options = {
 export const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
 export const setupSwagger = (app: Express): void => {
+  const docsPath = baseUrl ? `${baseUrl}/docs` : "/docs";
+
   // Swagger UI route
   app.use(
-    "/api/docs",
+    docsPath,
     swaggerUi.serve,
     swaggerUi.setup(swaggerSpec, {
       customSiteTitle: "Shop API - Swagger UI",
@@ -53,7 +62,7 @@ export const setupSwagger = (app: Express): void => {
   );
 
   // Raw JSON spec route
-  app.get("/api/docs.json", (_req: Request, res: Response) => {
+  app.get(`${docsPath}.json`, (_req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
   });

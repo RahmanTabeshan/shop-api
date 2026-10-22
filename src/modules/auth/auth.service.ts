@@ -1,5 +1,10 @@
 import prisma from "../../config/prisma.js";
-import { tooManyRequests } from "../../errors/app-error.js";
+import {
+    badRequest,
+    notFound,
+    tooManyRequests,
+    unauthorized,
+} from "../../errors/app-error.js";
 import { generateOtpCode, generateUserToken } from "./auth.utils.js";
 import type {
     AuthResult,
@@ -120,23 +125,104 @@ export const loginWithPassword = async (
 };
 
 /**
- * Functional: Mock OTP verification and auto-login / register (issuing 7-day user token)
+ * Functional: Verify OTP code, enforce 5-attempt brute-force protection,
+ * mark OTP as used, find or auto-register user, and issue 7-day user token.
  */
 export const verifyOtp = async (
     data: VerifyOtpDto,
 ): Promise<AuthResult> => {
-    const isNewUser = data.phone !== sampleUser.phone;
-    const user: AuthUser = {
-        id: isNewUser ? `new-user-${Date.now()}` : sampleUser.id,
-        phone: data.phone,
-        hasPassword: !isNewUser,
-        createdAt: new Date(),
+    // 1. Find the latest active and unexpired OTP record for this phone
+    const activeOtp = await prisma.otp.findFirst({
+        where: {
+            phone: data.phone,
+            used: false,
+            expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+    });
+
+    if (!activeOtp) {
+        throw badRequest(
+            "کد تأیید نامعتبر است یا منقضی شده است. لطفاً مجدداً درخواست کد دهید",
+        );
+    }
+
+    // 2. Check if attempts already reached max limit (5)
+    if (activeOtp.attempts >= 5) {
+        await prisma.otp.update({
+            where: { id: activeOtp.id },
+            data: { used: true },
+        });
+        throw tooManyRequests(
+            "تعداد دفعات تلاش ناموفق بیش از حد مجاز است. لطفاً مجدداً درخواست کد دهید",
+        );
+    }
+
+    // 3. Verify OTP code match
+    if (activeOtp.code !== data.code) {
+        const updatedOtp = await prisma.otp.update({
+            where: { id: activeOtp.id },
+            data: { attempts: { increment: 1 } },
+        });
+        const remainingAttempts = 5 - updatedOtp.attempts;
+
+        if (remainingAttempts <= 0) {
+            await prisma.otp.update({
+                where: { id: activeOtp.id },
+                data: { used: true },
+            });
+            throw tooManyRequests(
+                "تعداد دفعات تلاش ناموفق بیش از حد مجاز است. لطفاً مجدداً درخواست کد دهید",
+            );
+        }
+
+        throw badRequest(
+            `کد تأیید وارد شده نادرست است (${remainingAttempts} تلاش باقی‌مانده)`,
+        );
+    }
+
+    // 4. Code is correct: mark OTP as used
+    await prisma.otp.update({
+        where: { id: activeOtp.id },
+        data: { used: true },
+    });
+
+    // Invalidate any other pending OTPs for this phone number
+    await prisma.otp.updateMany({
+        where: {
+            phone: data.phone,
+            used: false,
+        },
+        data: {
+            used: true,
+        },
+    });
+
+    // 5. Find existing user or auto-register new user in PostgreSQL
+    let user = await prisma.user.findUnique({
+        where: { phone: data.phone },
+    });
+
+    if (!user) {
+        user = await prisma.user.create({
+            data: {
+                phone: data.phone,
+            },
+        });
+    }
+
+    // 6. Format authenticated user object and generate 7-day token
+    const authUser: AuthUser = {
+        id: user.id,
+        phone: user.phone,
+        hasPassword: Boolean(user.password),
+        createdAt: user.createdAt,
     };
 
     const token = generateUserToken(user.id);
 
     return {
-        user,
+        user: authUser,
         token,
     };
 };
@@ -152,11 +238,25 @@ export const setPassword = async (
 };
 
 /**
- * Functional: Mock get current user profile
+ * Functional: Get current user profile by ID from database
  */
 export const getCurrentUser = async (userId?: string): Promise<AuthUser> => {
+    if (!userId) {
+        throw unauthorized("احراز هویت انجام نشده است");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw notFound("کاربری با این مشخصات یافت نشد");
+    }
+
     return {
-        ...sampleUser,
-        id: userId || sampleUser.id,
+        id: user.id,
+        phone: user.phone,
+        hasPassword: Boolean(user.password),
+        createdAt: user.createdAt,
     };
 };

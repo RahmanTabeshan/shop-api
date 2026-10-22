@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../../middlewares/auth.middleware.js";
+import { authenticate } from "./auth.middleware.js";
 import { validate } from "../../middlewares/validate.js";
 import {
     loginPasswordHandler,
@@ -20,7 +20,7 @@ const authRoutes: Router = Router();
 
 /**
  * @openapi
- * /api/auth/login-password:
+ * /auth/login-password:
  *   post:
  *     tags:
  *       - Authentication
@@ -55,7 +55,7 @@ authRoutes.post(
 
 /**
  * @openapi
- * /api/auth/send-otp:
+ * /auth/send-otp:
  *   post:
  *     tags:
  *       - Authentication
@@ -84,7 +84,7 @@ authRoutes.post(
 
 /**
  * @openapi
- * /api/auth/verify-otp:
+ * /auth/verify-otp:
  *   post:
  *     tags:
  *       - Authentication
@@ -117,7 +117,7 @@ authRoutes.post(
 
 /**
  * @openapi
- * /api/auth/set-password:
+ * /auth/set-password:
  *   post:
  *     tags:
  *       - Authentication
@@ -153,7 +153,7 @@ authRoutes.post(
 
 /**
  * @openapi
- * /api/auth/logout:
+ * /auth/logout:
  *   post:
  *     tags:
  *       - Authentication
@@ -166,7 +166,7 @@ authRoutes.post("/logout", logoutHandler);
 
 /**
  * @openapi
- * /api/auth/me:
+ * /auth/me:
  *   get:
  *     tags:
  *       - Authentication

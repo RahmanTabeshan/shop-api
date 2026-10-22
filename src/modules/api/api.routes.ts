@@ -5,7 +5,7 @@ const apiRoutes: Router = express.Router();
 
 /**
  * @openapi
- * /api:
+ * /:
  *   get:
  *     tags:
  *       - General
