@@ -9,4 +9,5 @@ model Otp {
 
   @@index([phone])
   @@index([expiresAt])
+  @@index([phone, used, expiresAt])
 }

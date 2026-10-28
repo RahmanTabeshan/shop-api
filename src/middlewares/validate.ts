@@ -129,15 +129,11 @@ export const validate = (schema: ZodType, part: RequestPart = "body") => {
                 return;
             }
 
-            // 8. Strict Data Assignment & Sanitization
+            // 8. Strict Data Assignment & Sanitization (V8 optimized, avoiding slow delete in loops)
             if (part === "query") {
-                // Wipe unauthorized query parameters, leaving only validated data
-                for (const key of Object.keys(req.query)) {
-                    delete (req.query as Record<string, unknown>)[key];
-                }
-                Object.assign(req.query, result.data);
+                req.query = result.data as typeof req.query;
             } else if (part === "params") {
-                Object.assign(req.params, result.data);
+                req.params = result.data as typeof req.params;
             } else {
                 req.body = result.data;
             }

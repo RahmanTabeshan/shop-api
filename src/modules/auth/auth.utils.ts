@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { Response } from "express";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { unauthorized } from "../../errors/app-error.js";
 
@@ -11,10 +12,28 @@ const isProduction = process.env.NODE_ENV === "production";
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_dev_shop_api_jwt_secret_key_2026";
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"];
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const BCRYPT_SALT_ROUNDS = 10;
 
 export interface UserTokenPayload {
     userId: string;
 }
+
+/**
+ * Hash plain-text password using bcrypt (cost factor 10)
+ */
+export const hashPassword = async (password: string): Promise<string> => {
+    return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+};
+
+/**
+ * Compare plain-text password against stored bcrypt hash
+ */
+export const comparePassword = async (
+    password: string,
+    hash: string,
+): Promise<boolean> => {
+    return bcrypt.compare(password, hash);
+};
 
 /**
  * Generate a cryptographically secure 5-digit numeric OTP (10000 - 99999)

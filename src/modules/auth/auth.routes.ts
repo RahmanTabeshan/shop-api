@@ -2,14 +2,17 @@ import { Router } from "express";
 import { authenticate } from "./auth.middleware.js";
 import { validate } from "../../middlewares/validate.js";
 import {
+    changePasswordHandler,
     loginPasswordHandler,
     logoutHandler,
     meHandler,
+    sendChangePasswordOtpHandler,
     sendOtpHandler,
     setPasswordHandler,
     verifyOtpHandler,
 } from "./auth.controller.js";
 import {
+    changePasswordSchema,
     loginPasswordSchema,
     sendOtpSchema,
     setPasswordSchema,
@@ -121,7 +124,7 @@ authRoutes.post(
  *   post:
  *     tags:
  *       - Authentication
- *     summary: تعیین یا ویرایش رمز عبور در پنل کاربری
+ *     summary: تعیین اولین رمز عبور برای کاربری که رمز ندارد (لاگین‌شده)
  *     security:
  *       - userSessionCookieAuth: []
  *       - userTokenCookieAuth: []
@@ -137,18 +140,88 @@ authRoutes.post(
  *               newPassword:
  *                 type: string
  *                 example: "NewStrongPassword123"
- *               oldPassword:
- *                 type: string
- *                 example: "OldPassword123"
  *     responses:
  *       200:
  *         description: رمز عبور با موفقیت ذخیره شد
+ *       400:
+ *         description: کاربر قبلاً رمز تعیین کرده یا فرمت ورودی نامعتبر است
+ *       401:
+ *         description: احراز هویت انجام نشده است
  */
 authRoutes.post(
     "/set-password",
     authenticate,
     validate(setPasswordSchema),
     setPasswordHandler,
+);
+
+/**
+ * @openapi
+ * /auth/change-password/send-otp:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: درخواست ارسال کد ۵ رقمی برای تغییر رمز عبور کاربر لاگین‌شده
+ *     security:
+ *       - userSessionCookieAuth: []
+ *       - userTokenCookieAuth: []
+ *     responses:
+ *       200:
+ *         description: کد تایید ارسال شد
+ *       400:
+ *         description: کاربر هنوز رمزی تعیین نکرده است
+ *       401:
+ *         description: احراز هویت انجام نشده است
+ *       429:
+ *         description: کد قبلی هنوز معتبر است و باید شکیبا بود
+ */
+authRoutes.post(
+    "/change-password/send-otp",
+    authenticate,
+    sendChangePasswordOtpHandler,
+);
+
+/**
+ * @openapi
+ * /auth/change-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: تایید کد ۵ رقمی و ثبت رمز عبور جدید برای کاربر لاگین‌شده
+ *     security:
+ *       - userSessionCookieAuth: []
+ *       - userTokenCookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - newPassword
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 example: "12345"
+ *               newPassword:
+ *                 type: string
+ *                 example: "BrandNewSecurePassword123"
+ *     responses:
+ *       200:
+ *         description: رمز عبور با موفقیت تغییر یافت
+ *       400:
+ *         description: کد تایید اشتباه است یا منقضی شده
+ *       401:
+ *         description: احراز هویت انجام نشده است
+ *       429:
+ *         description: تعداد تلاش‌های اشتباه بیش از حد مجاز است
+ */
+authRoutes.post(
+    "/change-password",
+    authenticate,
+    validate(changePasswordSchema),
+    changePasswordHandler,
 );
 
 /**

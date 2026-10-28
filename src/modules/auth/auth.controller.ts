@@ -2,13 +2,16 @@ import type { NextFunction, Request, Response } from "express";
 import { unauthorized } from "../../errors/app-error.js";
 import { clearUserCookies, setUserCookies } from "./auth.utils.js";
 import {
+    changePassword,
     getCurrentUser,
     loginWithPassword,
+    sendChangePasswordOtp,
     sendOtp,
     setPassword,
     verifyOtp,
 } from "./auth.service.js";
 import type {
+    ChangePasswordDto,
     LoginPasswordDto,
     SendOtpDto,
     SetPasswordDto,
@@ -102,11 +105,67 @@ export const setPasswordHandler = async (
             );
         }
 
-        await setPassword(userId, payload);
+        const result = await setPassword(userId, payload);
 
         res.status(200).json({
             success: true,
-            message: "رمز عبور با موفقیت ذخیره شد",
+            message: result.message,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Functional Request Handler: POST /auth/change-password/send-otp
+ */
+export const sendChangePasswordOtpHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            throw unauthorized(
+                "برای تغییر رمز عبور ابتدا باید وارد حساب کاربری خود شوید",
+            );
+        }
+
+        const result = await sendChangePasswordOtp(userId);
+
+        res.status(200).json({
+            success: true,
+            message: "کد تأیید برای تغییر رمز عبور ارسال شد",
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Functional Request Handler: POST /auth/change-password
+ */
+export const changePasswordHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
+    try {
+        const payload = req.body as ChangePasswordDto;
+        const userId = req.user?.id;
+        if (!userId) {
+            throw unauthorized(
+                "برای تغییر رمز عبور ابتدا باید وارد حساب کاربری خود شوید",
+            );
+        }
+
+        const result = await changePassword(userId, payload);
+
+        res.status(200).json({
+            success: true,
+            message: result.message,
         });
     } catch (error) {
         next(error);

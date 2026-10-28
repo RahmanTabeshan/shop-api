@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type {
+    changePasswordSchema,
     loginPasswordSchema,
     sendOtpSchema,
     setPasswordSchema,
@@ -11,6 +12,7 @@ export type SendOtpDto = z.infer<typeof sendOtpSchema>;
 export type VerifyOtpDto = z.infer<typeof verifyOtpSchema>;
 export type LoginPasswordDto = z.infer<typeof loginPasswordSchema>;
 export type SetPasswordDto = z.infer<typeof setPasswordSchema>;
+export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;
 
 // Response & Domain Models
 export interface AuthUser {
