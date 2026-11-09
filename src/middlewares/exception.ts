@@ -19,7 +19,8 @@ export const exceptionHandler = (
       success: false,
       statusCode: error.statusCode,
       message: error.message,
-      ...(error.errors ? { errors: error.errors } : {}),
+      ...(error.data !== undefined ? { data: error.data } : {}),
+      ...(error.errors !== undefined ? { errors: error.errors } : {}),
     });
     return;
   }

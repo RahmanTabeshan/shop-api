@@ -234,3 +234,42 @@ sequenceDiagram
 }
 ```
 فرانت‌اند می‌تواند مستقیماً از آرایه `errors` برای نمایش ارور زیر فیلد مربوطه در فرم استفاده کند.
+
+---
+
+## ۸. مدیریت درخواست مجدد کد تایید و فیلد زمان باقی‌مانده (`remainingSeconds`)
+
+اگر کاربر قبل از به پایان رسیدن مهلت ۲ دقیقه (۱۲۰ ثانیه) کد قبلی، مجدداً دکمه «ارسال مجدد کد» را برای هرکدام از اندپوینت‌های `/auth/send-otp` یا `/auth/change-password/send-otp` کلیک کند، سرور با وضعیت `HTTP 429 Too Many Requests` پاسخ می‌دهد و ثانیه‌های باقی‌مانده را در آبجکت `data.remainingSeconds` بازمی‌گرداند:
+
+```json
+{
+  "success": false,
+  "statusCode": 429,
+  "message": "کد تأیید قبلی هنوز معتبر است. لطفاً 85 ثانیه دیگر جهت درخواست مجدد شکیبا باشید",
+  "data": {
+    "remainingSeconds": 85
+  }
+}
+```
+
+### نمونه کد همگام‌سازی تایمر در فرانت‌اند (React / Axios):
+
+```typescript
+try {
+  const response = await axios.post("/auth/send-otp", { phone });
+  // شروع شمارش معکوس 120 ثانیه در صورت موفقیت
+  startCountdown(120);
+} catch (error: any) {
+  if (error.response?.status === 429) {
+    const remainingSeconds = error.response.data?.data?.remainingSeconds;
+    if (remainingSeconds) {
+      // همگام‌سازی دقیق تایمر فرانت‌اند با دیتابیس
+      startCountdown(remainingSeconds);
+    }
+    toast.warning(error.response.data.message);
+  } else {
+    toast.error(error.response?.data?.message || "خطایی رخ داد");
+  }
+}
+```
+

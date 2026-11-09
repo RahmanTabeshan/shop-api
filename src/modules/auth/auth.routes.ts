@@ -78,6 +78,10 @@ authRoutes.post(
  *     responses:
  *       200:
  *         description: کد تایید ارسال شد و مشخص می‌کند کاربر جدید است یا قبلی
+ *       400:
+ *         description: شماره موبایل وارد شده نامعتبر است
+ *       429:
+ *         description: کد قبلی هنوز معتبر است و زمان باقی‌مانده در data.remainingSeconds بازمی‌گردد
  */
 authRoutes.post(
     "/send-otp",
@@ -173,7 +177,7 @@ authRoutes.post(
  *       401:
  *         description: احراز هویت انجام نشده است
  *       429:
- *         description: کد قبلی هنوز معتبر است و باید شکیبا بود
+ *         description: کد قبلی هنوز معتبر است و زمان باقی‌مانده در data.remainingSeconds بازمی‌گردد
  */
 authRoutes.post(
     "/change-password/send-otp",

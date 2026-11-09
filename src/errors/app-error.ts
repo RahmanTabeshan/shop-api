@@ -5,6 +5,7 @@ export interface AppError extends Error {
   statusCode: number;
   isOperational: boolean;
   errors?: unknown;
+  data?: unknown;
 }
 
 /**
@@ -26,12 +27,14 @@ export const createAppError = (
   statusCode = 500,
   message = "خطایی در سرور رخ داده است",
   isOperational = true,
-  errors?: unknown
+  errors?: unknown,
+  data?: unknown
 ): AppError => {
   const error = new Error(message) as AppError;
   error.statusCode = statusCode;
   error.isOperational = isOperational;
   error.errors = errors;
+  error.data = data;
   return error;
 };
 
@@ -51,8 +54,12 @@ export const notFound = (message = "موردی با این مشخصات یافت
 export const conflict = (message = "اطلاعات ارسالی با داده‌های موجود در سیستم مغایرت دارد"): AppError =>
   createAppError(409, message, true);
 
-export const tooManyRequests = (message = "تعداد درخواست‌های ارسالی بیش از حد مجاز است. لطفاً کمی بعد تلاش کنید"): AppError =>
-  createAppError(429, message, true);
+export const tooManyRequests = (
+  message = "تعداد درخواست‌های ارسالی بیش از حد مجاز است. لطفاً کمی بعد تلاش کنید",
+  data?: unknown,
+  errors?: unknown
+): AppError =>
+  createAppError(429, message, true, errors, data);
 
 export const internalError = (message = "خطای غیرمنتظره در سرور رخ داده است"): AppError =>
   createAppError(500, message, false);

@@ -58,6 +58,7 @@ const createAndIssueOtp = async (
             const remainingSeconds = Math.ceil(remainingMs / 1000);
             throw tooManyRequests(
                 `کد تأیید قبلی هنوز معتبر است. لطفاً ${remainingSeconds} ثانیه دیگر جهت درخواست مجدد شکیبا باشید`,
+                { remainingSeconds },
             );
         }
     }
