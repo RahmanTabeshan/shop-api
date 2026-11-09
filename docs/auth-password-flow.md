@@ -237,39 +237,50 @@ sequenceDiagram
 
 ---
 
-## ۸. مدیریت درخواست مجدد کد تایید و فیلد زمان باقی‌مانده (`remainingSeconds`)
+## ۸. ساختار یکپارچه پاسخ درخواست کد تایید و مدیریت ارسال زودهنگام (HTTP 200)
 
-اگر کاربر قبل از به پایان رسیدن مهلت ۲ دقیقه (۱۲۰ ثانیه) کد قبلی، مجدداً دکمه «ارسال مجدد کد» را برای هرکدام از اندپوینت‌های `/auth/send-otp` یا `/auth/change-password/send-otp` کلیک کند، سرور با وضعیت `HTTP 429 Too Many Requests` پاسخ می‌دهد و ثانیه‌های باقی‌مانده را در آبجکت `data.remainingSeconds` بازمی‌گرداند:
+پاسخ اندپوینت‌های درخواست کد تایید (`POST /auth/send-otp` و `POST /auth/change-password/send-otp`) در هر دو حالت (درخواست بار اول یا درخواست مجدد قبل از اتمام ۲ دقیقه) **کاملاً با وضعیت `HTTP 200` و ساختار یکسان** بازگردانده می‌شود تا کنترل وضعیت در فرانت‌اند بسیار ساده و روان باشد:
 
+### حالت اول: درخواست بار اول (یا پس از انقضای ۲ دقیقه)
+کد جدید تولید شده و مهلت ۱۲۰ ثانیه‌ای تنظیم می‌شود:
 ```json
 {
-  "success": false,
-  "statusCode": 429,
-  "message": "کد تأیید قبلی هنوز معتبر است. لطفاً 85 ثانیه دیگر جهت درخواست مجدد شکیبا باشید",
+  "success": true,
+  "message": "کد تأیید برای ورود ارسال شد",
   "data": {
-    "remainingSeconds": 85
+    "isNewUser": false,
+    "expiresIn": 120
   }
 }
 ```
 
-### نمونه کد همگام‌سازی تایمر در فرانت‌اند (React / Axios):
+### حالت دوم: درخواست مجدد قبل از اتمام ۲ دقیقه
+کد قبلی معتبر باقی مانده، زمان باقی‌مانده در `expiresIn` بازگشته و پیام اطلاع‌رسانی می‌شود:
+```json
+{
+  "success": true,
+  "message": "کد هنوز معتبر است",
+  "data": {
+    "isNewUser": false,
+    "expiresIn": 85
+  }
+}
+```
+
+### نمونه کد یکپارچه‌سازی تایمر در فرانت‌اند (React / Axios):
 
 ```typescript
 try {
-  const response = await axios.post("/auth/send-otp", { phone });
-  // شروع شمارش معکوس 120 ثانیه در صورت موفقیت
-  startCountdown(120);
+  const { data } = await axios.post("/auth/send-otp", { phone });
+
+  // همگام‌سازی تایمر بر اساس زمان بازگشتی سرور (120 ثانیه یا ثانیه‌های باقی‌مانده)
+  startCountdown(data.data.expiresIn);
+
+  // نمایش پیام سرور به کاربر ("کد تأیید برای ورود ارسال شد" یا "کد هنوز معتبر است")
+  toast.info(data.message);
 } catch (error: any) {
-  if (error.response?.status === 429) {
-    const remainingSeconds = error.response.data?.data?.remainingSeconds;
-    if (remainingSeconds) {
-      // همگام‌سازی دقیق تایمر فرانت‌اند با دیتابیس
-      startCountdown(remainingSeconds);
-    }
-    toast.warning(error.response.data.message);
-  } else {
-    toast.error(error.response?.data?.message || "خطایی رخ داد");
-  }
+  // تنها خطاهای اعتبارسنجی واقعی مانند فرمت نادرست موبایل به catch می‌آیند
+  toast.error(error.response?.data?.message || "خطایی در برقراری ارتباط رخ داد");
 }
 ```
 

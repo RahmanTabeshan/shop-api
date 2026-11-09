@@ -51,14 +51,12 @@ export const sendOtpHandler = async (
 ): Promise<void> => {
     try {
         const payload = req.body as SendOtpDto;
-        const result = await sendOtp(payload);
+        const { message, ...data } = await sendOtp(payload);
 
         res.status(200).json({
             success: true,
-            message: result.isNewUser
-                ? "کد تأیید برای ثبت‌نام ارسال شد"
-                : "کد تأیید برای ورود ارسال شد",
-            data: result,
+            message,
+            data,
         });
     } catch (error) {
         next(error);
@@ -132,12 +130,12 @@ export const sendChangePasswordOtpHandler = async (
             );
         }
 
-        const result = await sendChangePasswordOtp(userId);
+        const { message, ...data } = await sendChangePasswordOtp(userId);
 
         res.status(200).json({
             success: true,
-            message: "کد تأیید برای تغییر رمز عبور ارسال شد",
-            data: result,
+            message,
+            data,
         });
     } catch (error) {
         next(error);

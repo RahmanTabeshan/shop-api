@@ -77,11 +77,9 @@ authRoutes.post(
  *                 example: "09121234567"
  *     responses:
  *       200:
- *         description: کد تایید ارسال شد و مشخص می‌کند کاربر جدید است یا قبلی
+ *         description: کد تایید ارسال شد (یا در صورت درخواست قبل از اتمام ۲ دقیقه، کد قبلی معتبر و زمان باقی‌مانده در expiresIn بازمی‌گردد)
  *       400:
  *         description: شماره موبایل وارد شده نامعتبر است
- *       429:
- *         description: کد قبلی هنوز معتبر است و زمان باقی‌مانده در data.remainingSeconds بازمی‌گردد
  */
 authRoutes.post(
     "/send-otp",
@@ -171,13 +169,11 @@ authRoutes.post(
  *       - userTokenCookieAuth: []
  *     responses:
  *       200:
- *         description: کد تایید ارسال شد
+ *         description: کد تایید ارسال شد (یا در صورت درخواست قبل از اتمام ۲ دقیقه، کد قبلی معتبر و زمان باقی‌مانده در expiresIn بازمی‌گردد)
  *       400:
  *         description: کاربر هنوز رمزی تعیین نکرده است
  *       401:
  *         description: احراز هویت انجام نشده است
- *       429:
- *         description: کد قبلی هنوز معتبر است و زمان باقی‌مانده در data.remainingSeconds بازمی‌گردد
  */
 authRoutes.post(
     "/change-password/send-otp",

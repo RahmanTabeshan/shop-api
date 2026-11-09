@@ -25,6 +25,7 @@ export interface AuthUser {
 export interface SendOtpResponse {
     isNewUser: boolean;
     expiresIn: number;
+    message: string;
     code?: string;
 }
 

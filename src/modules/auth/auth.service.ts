@@ -25,13 +25,19 @@ import type {
 const OTP_EXPIRATION_SECONDS = 120; // 2 minutes
 const MAX_OTP_ATTEMPTS = 5;
 
+interface IssuedOtp {
+    code: string;
+    expiresIn: number;
+    isExisting: boolean;
+}
+
 /**
- * Functional Helper: Issue and store new 5-digit OTP with strict rate limit and opportunistic cleanup
+ * Functional Helper: Issue and store 5-digit OTP with 2-minute cooldown and opportunistic cleanup
  */
 const createAndIssueOtp = async (
     phone: string,
     context = "AUTH",
-): Promise<{ code: string; expiresIn: number }> => {
+): Promise<IssuedOtp> => {
     // 1. Opportunistic Cleanup of expired OTPs asynchronously in background
     prisma.otp
         .deleteMany({
@@ -39,7 +45,7 @@ const createAndIssueOtp = async (
         })
         .catch(() => {});
 
-    // 2. Strict Rate Limit: Prevent new requests while previous active OTP is still valid (2 minutes)
+    // 2. Cooldown check: If previous active OTP is still valid (< 2 minutes), return existing active OTP
     const activeOtp = await prisma.otp.findFirst({
         where: {
             phone,
@@ -48,19 +54,26 @@ const createAndIssueOtp = async (
         },
         orderBy: { createdAt: "desc" },
         select: {
+            code: true,
             expiresAt: true,
         },
     });
 
     if (activeOtp) {
         const remainingMs = activeOtp.expiresAt.getTime() - Date.now();
-        if (remainingMs > 0) {
-            const remainingSeconds = Math.ceil(remainingMs / 1000);
-            throw tooManyRequests(
-                `کد تأیید قبلی هنوز معتبر است. لطفاً ${remainingSeconds} ثانیه دیگر جهت درخواست مجدد شکیبا باشید`,
-                { remainingSeconds },
+        const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+
+        if (process.env.NODE_ENV !== "production") {
+            console.log(
+                `[${context} OTP DEV] Phone: ${phone} -> Active Code: ${activeOtp.code} (Still valid for ${remainingSeconds}s)`,
             );
         }
+
+        return {
+            code: activeOtp.code,
+            expiresIn: remainingSeconds,
+            isExisting: true,
+        };
     }
 
     // 3. Invalidate previous unused OTP records for this phone
@@ -88,6 +101,7 @@ const createAndIssueOtp = async (
     return {
         code,
         expiresIn: OTP_EXPIRATION_SECONDS,
+        isExisting: false,
     };
 };
 
@@ -164,12 +178,20 @@ export const sendOtp = async (data: SendOtpDto): Promise<SendOtpResponse> => {
         select: { id: true },
     });
 
-    const { code, expiresIn } = await createAndIssueOtp(data.phone, "AUTH");
+    const { code, expiresIn, isExisting } = await createAndIssueOtp(data.phone, "AUTH");
     const isDev = process.env.NODE_ENV !== "production";
 
+    const isNewUser = !existingUser;
+    const message = isExisting
+        ? "کد هنوز معتبر است"
+        : isNewUser
+        ? "کد تأیید برای ثبت‌نام ارسال شد"
+        : "کد تأیید برای ورود ارسال شد";
+
     return {
-        isNewUser: !existingUser,
+        isNewUser,
         expiresIn,
+        message,
         ...(isDev ? { code } : {}),
     };
 };
@@ -319,12 +341,17 @@ export const sendChangePasswordOtp = async (
         );
     }
 
-    const { code, expiresIn } = await createAndIssueOtp(user.phone, "CHANGE-PASSWORD");
+    const { code, expiresIn, isExisting } = await createAndIssueOtp(user.phone, "CHANGE-PASSWORD");
     const isDev = process.env.NODE_ENV !== "production";
+
+    const message = isExisting
+        ? "کد هنوز معتبر است"
+        : "کد تأیید برای تغییر رمز عبور ارسال شد";
 
     return {
         isNewUser: false,
         expiresIn,
+        message,
         ...(isDev ? { code } : {}),
     };
 };
