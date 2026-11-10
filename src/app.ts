@@ -7,6 +7,9 @@ import setupSwagger from "./config/swagger.js";
 
 export const app = express();
 
+// Trust first proxy for accurate client IP resolution behind reverse proxies
+app.set("trust proxy", 1);
+
 // Middlewares
 applyMiddlewares(app);
 

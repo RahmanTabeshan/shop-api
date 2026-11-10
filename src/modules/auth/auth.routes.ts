@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "./auth.middleware.js";
 import { validate } from "../../middlewares/validate.js";
+import { authLimiter } from "../../middlewares/rate-limit.js";
 import {
     changePasswordHandler,
     loginPasswordHandler,
@@ -20,6 +21,9 @@ import {
 } from "./auth.validation.js";
 
 const authRoutes: Router = Router();
+
+// Rate limiting: 5 requests per 15 minutes per IP on auth endpoints
+authRoutes.use(authLimiter);
 
 /**
  * @openapi
